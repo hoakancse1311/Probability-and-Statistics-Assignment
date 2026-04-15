@@ -25,7 +25,7 @@ gpu_data <- read.csv("All_GPUs.csv")
 head(gpu_data)
 
 #clean to check missing data 
-gpu_data[gpu_data == ""] <- NA
+gpu_data[trimws(gpu_data) == ""] <- NA
 gpu_data[] <- lapply(gpu_data, function(x) gsub("^\\n-␣$", NA, x))
 gpu_data[gpu_data == "NA"] <- NA
 freq.na(gpu_data)
@@ -35,7 +35,7 @@ main_data <- gpu_data[c("Memory_Bandwidth", "Memory_Speed", "L2_Cache",
 head(main_data)
 
 # Clean data
-main_data[main_data == ""] <- NA
+main_data[trimws(main_data) == ""] <- NA
 main_data[] <- lapply(main_data, function(x) gsub("^\\n-␣$", NA, x))
 main_data[main_data == "NA"] <- NA
 #freq.na(main_data)
