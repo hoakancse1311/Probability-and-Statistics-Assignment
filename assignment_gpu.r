@@ -4,7 +4,8 @@ library(reshape2)  # For preparing data for correlation plot
 library(caret)     # For training data
 library(lattice)   # For boxplot
 library(questionr)
-
+library(car)
+library(effectsize)
 # Create directories for results
 dirs <- c("Results",
           "Results/Cleaned",
@@ -13,7 +14,8 @@ dirs <- c("Results",
           "Results/Correlation",
           "Results/Missing",
           "Results/Residual",
-          "Results/Scatter")
+          "Results/Scatter",
+          "Results/ANOVA")
 for (dir in dirs) {
   if (!dir.exists(dir)) {
     dir.create(dir, recursive = TRUE, showWarnings = FALSE)
@@ -364,4 +366,96 @@ png("Results/Residual/residual_plots.png",
     units = "in", res = 300, bg = "white")
 par(mfrow = c(2, 2))
 plot(model)
+dev.off()
+# -------------------------------------------------
+# 1) One-way ANOVA for Manufacturer
+# -------------------------------------------------
+anova_manufacturer <- aov(Memory_Bandwidth ~ Manufacturer, data = new_main_data)
+summary(anova_manufacturer)
+
+tukey_manufacturer <- TukeyHSD(anova_manufacturer)
+print(tukey_manufacturer)
+
+print("--- Eta-squared: Manufacturer ---")
+eta_manu <- eta_squared(anova_manufacturer, partial = FALSE)
+print(eta_manu)
+
+print("--- Levene's Test: Manufacturer ---")
+levene_manu <- leveneTest(Memory_Bandwidth ~ Manufacturer, data = new_main_data)
+print(levene_manu)
+
+print("--- Welch's ANOVA: Manufacturer (Do rớt Levene's Test) ---")
+welch_manu <- oneway.test(Memory_Bandwidth ~ Manufacturer, data = new_main_data, var.equal = FALSE)
+print(welch_manu)
+
+# Boxplot for Manufacturer
+plot_manufacturer <- ggplot(new_main_data, aes(x = Manufacturer, y = Memory_Bandwidth, fill = Manufacturer)) +
+  geom_boxplot() +
+  labs(
+    title = "Comparison of Memory Bandwidth by Manufacturer",
+    x = "Manufacturer",
+    y = "Memory Bandwidth (GB/s)"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+print(plot_manufacturer)
+ggsave("Results/ANOVA/anova_manufacturer_boxplot.png",
+       plot = plot_manufacturer,
+       width = 8, height = 6,
+       units = "in", dpi = 300, bg = "white")
+
+# Diagnostic plots for Manufacturer ANOVA
+png("Results/ANOVA/anova_manufacturer_diagnostics.png",
+    width = 10, height = 8,
+    units = "in", res = 300, bg = "white")
+par(mfrow = c(2, 2))
+plot(anova_manufacturer)
+dev.off()
+
+# -------------------------------------------------
+# 2) One-way ANOVA for Dedicated
+# -------------------------------------------------
+anova_dedicated <- aov(Memory_Bandwidth ~ Dedicated, data = new_main_data)
+summary(anova_dedicated)
+
+print("--- Eta-squared: Dedicated ---")
+eta_dedi <- eta_squared(anova_dedicated, partial = FALSE)
+print(eta_dedi)
+
+print("--- Levene's Test: Dedicated ---")
+levene_dedi <- leveneTest(Memory_Bandwidth ~ Dedicated, data = new_main_data)
+print(levene_dedi)
+
+print("--- Welch's ANOVA: Dedicated (Do rớt Levene's Test) ---")
+welch_dedi <- oneway.test(Memory_Bandwidth ~ Dedicated, data = new_main_data, var.equal = FALSE)
+print(welch_dedi)
+
+# Với Dedicated chỉ có 2 nhóm, không nhất thiết cần TukeyHSD
+# nhưng vẫn có thể xem trung bình từng nhóm:
+aggregate(Memory_Bandwidth ~ Dedicated, data = new_main_data, FUN = mean)
+
+# Boxplot for Dedicated
+plot_dedicated <- ggplot(new_main_data, aes(x = Dedicated, y = Memory_Bandwidth, fill = Dedicated)) +
+  geom_boxplot() +
+  labs(
+    title = "Comparison of Memory Bandwidth by Dedicated Type",
+    x = "Dedicated",
+    y = "Memory Bandwidth (GB/s)"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+print(plot_dedicated)
+ggsave("Results/ANOVA/anova_dedicated_boxplot.png",
+       plot = plot_dedicated,
+       width = 8, height = 6,
+       units = "in", dpi = 300, bg = "white")
+
+# Diagnostic plots for Dedicated ANOVA
+png("Results/ANOVA/anova_dedicated_diagnostics.png",
+    width = 10, height = 8,
+    units = "in", res = 300, bg = "white")
+par(mfrow = c(2, 2))
+plot(anova_dedicated)
 dev.off()
