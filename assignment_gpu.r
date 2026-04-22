@@ -15,7 +15,8 @@ dirs <- c("Results",
           "Results/Missing",
           "Results/Residual",
           "Results/Scatter",
-          "Results/ANOVA")
+          "Results/ANOVA",
+          "Results/test_predict")
 for (dir in dirs) {
   if (!dir.exists(dir)) {
     dir.create(dir, recursive = TRUE, showWarnings = FALSE)
@@ -367,6 +368,63 @@ png("Results/Residual/residual_plots.png",
 par(mfrow = c(2, 2))
 plot(model)
 dev.off()
+
+# =================================================================
+# DỰ ĐOÁN VÀ ĐÁNH GIÁ MÔ HÌNH TRÊN TẬP TEST
+# =================================================================
+
+# Bước 1: Cho mô hình dự đoán trên tập test_data
+# Kết quả trả về đang ở dạng Logarit (do mô hình học trên dữ liệu Log)
+predictions_log <- predict(model, newdata = test_data)
+
+# Bước 2: ĐẢO NGƯỢC LOGARIT để đưa về đơn vị thực tế (GB/s)
+# Lưu ý: Nếu ban đầu bạn dùng log(x) thì dùng exp(). 
+# Nếu dùng log(x+1) thì dùng exp(x) - 1. Dưới đây dùng exp() cho dạng chuẩn:
+predictions_real <- exp(predictions_log) - 1
+
+# Lấy giá trị thực tế của tập test và cũng đảo ngược Log về GB/s
+actual_real <- exp(test_data$Memory_Bandwidth) - 1
+
+# Bước 3: Tính toán các chỉ số đánh giá sai số
+# 3.1. Tính sai số (Error)
+errors <- actual_real - predictions_real
+
+# 3.2. Tính RMSE (Root Mean Squared Error) - Độ lệch chuẩn của phần dư
+rmse_val <- sqrt(mean(errors^2, na.rm = TRUE))
+
+# 3.3. Tính MAE (Mean Absolute Error) - Sai số tuyệt đối trung bình
+mae_val <- mean(abs(errors), na.rm = TRUE)
+
+# In kết quả ra màn hình
+print(paste("--- KẾT QUẢ ĐÁNH GIÁ TRÊN TẬP TEST ---"))
+print(paste("Sai số RMSE:", round(rmse_val, 2), "GB/s"))
+print(paste("Sai số MAE:", round(mae_val, 2), "GB/s"))
+
+# =================================================================
+# VẼ BIỂU ĐỒ SO SÁNH: THỰC TẾ vs DỰ ĐOÁN
+# =================================================================
+# Tạo một dataframe để chứa kết quả vẽ
+results_df <- data.frame(
+  Actual = actual_real,
+  Predicted = predictions_real
+)
+
+# Vẽ biểu đồ Scatter Plot (Thực tế vs Dự đoán)
+plot_predict <- ggplot(results_df, aes(x = Actual, y = Predicted)) +
+  geom_point(color = "steelblue", alpha = 0.6) +
+  geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed", size = 1) +
+  labs(title = "Đánh giá mô hình: Băng thông Thực tế vs Dự đoán",
+       subtitle = "Đường nét đứt màu đỏ thể hiện dự đoán hoàn hảo (Lỗi = 0)",
+       x = "Băng thông Thực tế (GB/s)",
+       y = "Băng thông Dự đoán (GB/s)") +
+  theme_minimal() +
+  xlim(0, max(results_df$Actual, na.rm=T)) + 
+  ylim(0, max(results_df$Predicted, na.rm=T))
+
+ggsave("Results/test_predict/actual_vs_predicted.png",
+       plot = plot_predict,
+       width = 8, height = 6,
+       units = "in", dpi = 300, bg = "white")
 # -------------------------------------------------
 # 1) One-way ANOVA for Manufacturer
 # -------------------------------------------------
